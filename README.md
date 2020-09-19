@@ -1,6 +1,6 @@
 # FlingAway
 [핵심 문제해결 전략 첨부](./docs/flingAway.pdf)  
-[ERD](./docs/erd.html)
+[ERD (파일 다운로드 후 브라우저 오픈)](./docs/erd.html)
 
 # Spec
 - JDK: 1.8

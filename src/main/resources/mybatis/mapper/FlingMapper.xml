@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?><!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.fling.repo.FlingMapper">
+
+    <select id="selectOneFlingAwayMst" resultType="com.fling.dto.FlingAwayMst">
+        select /* selectoneFlingAwayMst 마스터기본조회 */
+               fling_id, room_id, token, fling_user_id, fling_dt, end_dt, fling_amt, people_cnt, fling_stat_cd
+          from fling_away_mst /* T.뿌리기 마스터 */
+         where 1=1
+           and room_id = #{roomId}
+           and token = #{token}
+           and del_yn = 'N'
+        order by fling_id
+        limit 1
+    </select>
+
+    <select id="selectOneFlingAwayMbrMst" resultType="com.fling.dto.FlingAwayMbrMst">
+        select /* selectOneFlingAwayMbrMst 멤버마스터기본조회 */
+            fling_id, fling_id, user_id, pickup_yn, seq
+        from fling_away_mbr_mst /* T.뿌리기 멤버 마스터 */
+        where 1=1
+          and fling_id = #{flingId}
+          and user_id = #{userId}
+          and del_yn = 'N'
+    </select>
+
+    <select id="selectToken" resultType="String">
+        select /* selectToken 토큰조회 */
+            token
+        from fling_away_mst /* T.뿌리기 마스터 */
+        where 1=1
+          and room_id = #{roomId}
+          and token = #{token}
+          and fling_dt >= now() - interval '7 day'
+          and del_yn = 'N'
+    </select>
+
+    <select id="insertFlingAwayMst" resultType="String">
+        insert /* insertFlingAwayMst 뿌리기마스터 생성  */
+            into fling_away_mst(
+                fling_id, room_id, token, fling_user_id, fling_dt, end_dt, fling_amt, people_cnt, create_user_id, create_pg_name
+            ) values (
+                 default
+                ,#{roomId}
+                ,#{token}
+                ,#{userId}
+                ,now()
+                ,now() + interval '10 minute'
+                ,#{amt}
+                ,#{cnt}
+                ,#{userId}
+                ,#{pgName}
+            )
+            returning fling_id
+    </select>
+
+    <insert id="insertFlingAwayAmtMst">
+        insert /* insertFlingAwayAmtMst 뿌리기금액마스터 생성  */
+            into fling_away_amt_mst(
+                fling_id, seq, amt, create_user_id, create_pg_name
+            )values (
+                 #{flingId}
+                ,#{seq}
+                ,#{amt}
+                ,#{userId}
+                ,#{pgName}
+            )
+    </insert>
+
+    <insert id="insertFlingAwayMbrMst">
+        insert /* insertFlingAwayMbrMst 뿌리기멤버마스터 생성  */
+        into fling_away_mbr_mst(fling_id, user_id, create_user_id, create_pg_name)
+        select #{flingId}
+             , user_id
+             , #{userId}
+             , #{pgName}
+        from room_mbr_mst /* T.멤버 마스터 */
+        where 1 = 1
+          and room_id = #{roomId}
+          and user_id != #{userId}
+    </insert>
+
+
+    <select id="selectGet1" resultType="com.fling.dto.SelectGet">
+        select /* selectGet1 조회API-1 */
+             fling_id
+            ,fling_dt
+            ,fling_amt
+            ,(
+                select sum(amt) from fling_away_amt_mst b
+                 where a.fling_id = b.fling_id
+                   and b.pickup_yn = 'Y'
+                   and b.del_yn = 'N'
+            ) as pickupAmt
+            ,fling_user_id
+          from fling_away_mst a /* T.뿌리기 마스터 */
+         where 1=1
+           and a.room_id = #{roomId}
+           and a.token = #{token}
+           and a.del_yn = 'N'
+    </select>
+
+
+    <select id="selectGet2" resultType="com.fling.dto.SubGet">
+        select /* selectGet2 조회API-2 */
+               b.amt
+             , b.pickup_user_id
+          from fling_away_mst     a /* T.뿌리기 마스터 */
+             , fling_away_amt_mst b /* T.뿌리기 금액 마스터 */
+         where 1=1
+           and a.fling_id = b.fling_id
+           and a.room_id = #{roomId}
+           and a.token = #{token}
+           and b.pickup_yn = 'Y'
+           and a.del_yn = 'N'
+           and b.del_yn = 'N'
+    </select>
+
+
+    <update id="updateFlingAwayAmtMst">
+        update /* updateFlingAwayAmtMst 받기API 뿌리기금액마스터수정 */
+            fling_away_amt_mst
+           set pickup_yn = 'Y',
+               pickup_user_id = #{userId},
+               pickup_dt = now(),
+               update_user_id = #{userId},
+               update_dt = now(),
+               update_pg_name = #{pgName}
+         where 1=1
+           and fling_id = #{flingId}
+           and seq = #{seq}
+    </update>
+
+
+    <update id="updateFlingAwayMbrMst">
+        update /* updateFlingAwayMbrMst 받기API 뿌리기멤버마스터수정 */
+            fling_away_mbr_mst
+        set pickup_yn = 'Y',
+            seq = #{seq},
+            update_user_id = #{userId},
+            update_dt = now(),
+            update_pg_name = #{pgName}
+        where 1=1
+          and fling_id = #{flingId}
+          and user_id = #{userId}
+    </update>
+
+
+    <update id="updateFlingAwayMst">
+        update /* updateFlingAwayMst 뿌리기마스터수정 */
+            fling_away_mst
+        set fling_stat_cd = #{statCd},
+            update_user_id = #{userId},
+            update_dt = now(),
+            update_pg_name = #{pgName}
+        where 1=1
+          and fling_id = #{flingId}
+    </update>
+
+    <select id="lockSelectToken" resultType="String">
+        select /* lockselectMst 마스터락 */
+            room_id
+        from room_mst /* T.대화방 마스터 */
+        where 1=1
+          and room_id = #{roomId}
+            for update
+    </select>
+
+    <select id="lockselectAmtMst" resultType="com.fling.dto.LockSelectAmtMst">
+        select /* lockselectAmtMst 금액마스터락 */
+               seq, amt
+        from fling_away_amt_mst /* T.뿌리기 금액 마스터 */
+        where 1=1
+          and fling_id = #{flingId}
+          and pickup_yn = 'N'
+          and del_yn = 'N'
+        order by seq
+        limit 1
+            for update
+    </select>
+
+    <select id="selectExpireTarget" resultType="com.fling.dto.SelectExpireTargetOut">
+        select /* selectExpireTarget 만료 대상 조회 */
+               a.fling_id
+              ,a.fling_user_id
+              ,(
+                select sum(amt) from fling_away_amt_mst b
+                 where a.fling_id = b.fling_id
+                   and b.pickup_yn = 'N'
+                   and b.del_yn = 'N'
+               ) as balance
+          from fling_away_mst a /* T. 뿌리기 마스터 */
+         where a.end_dt &lt;= now()
+           and a.fling_stat_cd = '1'
+           and a.del_yn = 'N'
+    </select>
+
+    <select id="selectCntFlingAwayMst" resultType="java.lang.Integer">
+        select /* selectCntFlingAwayMst 뿌리기 마스터 전체 건수 조회 */
+               count(1) as cnt
+          from fling_away_mst /* T.뿌리기 마스터 */
+    </select>
+
+    <select id="selectTotAmtFlingAwayMstByToken" resultType="java.lang.Long">
+        select /* selectTotAmtFlingAwayMstByToken 금액 마스터 건수 조회 by 토큰 */
+               sum(b.amt)
+          from fling_away_mst     a /* T.뿌리기 마스터 */
+              ,fling_away_amt_mst b /* T.뿌리기 금액 마스터 */
+         where a.fling_id = b.fling_id
+           and a.token = #{token}
+    </select>
+
+    <select id="selectCntFlingAwayAmtMstByToken" resultType="java.lang.Integer">
+        select /* selectCntFlingAwayAmtMstByToken 금액 마스터 금액 합 조회 by 토큰 */
+               count(1)
+          from fling_away_mst     a /* T.뿌리기 마스터 */
+              ,fling_away_amt_mst b /* T.뿌리기 금액 마스터 */
+         where a.fling_id = b.fling_id
+           and a.token = #{token}
+    </select>
+
+    <select id="selectCntPickedUpFlingAwayAmtMstByToken" resultType="java.lang.Integer">
+        select /* selectCntPickedUpFlingAwayAmtMstByToken 금액 마스터 픽업 건수 조회 by 토큰 */
+               coalesce(sum(1), 0)
+          from fling_away_mst     a /* T.뿌리기 마스터 */
+              ,fling_away_amt_mst b /* T.뿌리기 금액 마스터 */
+         where a.fling_id = b.fling_id
+           and b.pickup_yn = 'Y'
+           and a.token = #{token}
+    </select>
+
+</mapper>

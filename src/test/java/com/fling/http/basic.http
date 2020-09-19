@@ -1,0 +1,317 @@
+############################################################
+### 1.기본동작확인
+############################################################
+### 뿌리기
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+{
+  "amt": 3000,
+  "cnt": 3
+}
+> {%
+    client.test("뿌리기 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("뿌리기 결과 토큰 확인", function() {
+        var token = response.body.token
+        client.assert(token !== undefined && token.length === 3, token + " 토큰오류발생")
+    })
+
+    client.global.set("rToken", response.body.token);
+%}
+
+### 받기
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 11
+X-ROOM-ID: R00000000001
+
+{
+  "token": "{{rToken}}"
+}
+> {%
+    client.test("받기 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("받기 결과 금액 확인", function() {
+        var amt = response.body.amt
+        client.assert(amt > 0, amt +" 금액오류발생")
+    })
+%}
+
+### 받기
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 12
+X-ROOM-ID: R00000000001
+
+{
+  "token": "{{rToken}}"
+}
+> {%
+    client.test("받기 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("받기 결과 금액 확인", function() {
+        var amt = response.body.amt
+        client.assert(amt > 0, amt +" 금액오류발생")
+    })
+%}
+
+### 조회
+GET http://localhost:5000/fling?token={{rToken}}
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+> {%
+    client.test("조회 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("조회 결과 금액 확인", function() {
+        client.assert(response.body.flingAmt >= response.body.pickupAmt, response.body.pickupAmt +" 금액오류발생")
+    })
+%}
+
+### 받기
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 15
+X-ROOM-ID: R00000000001
+
+{
+  "token": "{{rToken}}"
+}
+> {%
+    client.test("받기 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("받기 결과 금액 확인", function() {
+        var amt = response.body.amt
+        client.assert(amt > 0, amt +" 금액오류발생")
+    })
+%}
+
+### 조회
+GET http://localhost:5000/fling?token={{rToken}}
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+> {%
+    client.test("조회 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+    client.test("조회 결과 금액 확인", function() {
+        client.assert(response.body.flingAmt >= response.body.pickupAmt, response.body.pickupAmt +" 금액오류발생")
+    })
+%}
+
+
+############################################################
+### 2.뿌리기 입력값 체크
+############################################################
+### 뿌릴금액 체크 - 0원 유효하지 않은 뿌릴금액이 입력되었습니다.
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+{
+  "amt": 0,
+  "cnt": 3
+}
+> {%
+    client.test("뿌리기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 뿌릴금액 체크 - 1조 유효하지 않은 뿌릴금액이 입력되었습니다
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+{
+  "amt": 1000000000000,
+  "cnt": 3
+}
+> {%
+    client.test("뿌리기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+
+### 뿌릴인원 체크 - 유효하지 않은 뿌릴인원이 입력되었습니다
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+{
+  "amt": 100000,
+  "cnt": 0
+}
+> {%
+    client.test("뿌리기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+
+### 뿌릴금액인원 체크 - 인원수 보다 적은 금액이 입력되었습니다
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 10
+X-ROOM-ID: R00000000001
+
+{
+  "amt": 1,
+  "cnt": 2
+}
+> {%
+    client.test("뿌리기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+
+############################################################
+### 2.받기 입력값 체크
+############################################################
+### 뿌리기
+POST http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 20
+X-ROOM-ID: R00000000002
+
+{
+  "amt": 5000,
+  "cnt": 5
+}
+> {%
+    client.global.set("tokena", response.body.token);
+%}
+
+### 받기 - 요청하신 뿌리기가 존재하지 않습니다.
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 30
+X-ROOM-ID: R00000000003
+
+{
+  "token": "{{tokena}}"
+}
+> {%
+    client.test("받기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 받기 - 뿌린 사람은 받기가 불가능합니다.
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 20
+X-ROOM-ID: R00000000002
+
+{
+  "token": "{{tokena}}"
+}
+> {%
+    client.test("받기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 받기 - 뿌리기 마감이 완료되었습니다.
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 20
+X-ROOM-ID: R00000000001
+
+{
+  "token": "{{rToken}}"
+}
+> {%
+    client.test("받기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 받기 - 해당뿌리기를 받을 수 있는 사용가 아닙니다.
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 19
+X-ROOM-ID: R00000000002
+
+{
+  "token": "{{tokena}}"
+}
+> {%
+    client.test("받기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 받기
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 21
+X-ROOM-ID: R00000000002
+
+{
+  "token": "{{tokena}}"
+}
+> {%
+    client.test("받기 정상 응답", function() {
+        client.assert(response.status === 200, response.status + " 오류응답발생")
+    })
+%}
+
+### 받기 - 이미 받은 사용자입니다. 받기는 한번만 가능합니다.
+PUT http://localhost:5000/fling
+Content-Type: application/json
+X-USER-ID: 21
+X-ROOM-ID: R00000000002
+
+{
+  "token": "{{tokena}}"
+}
+> {%
+    client.test("받기 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+############################################################
+### 3.조회 입력값 체크
+############################################################
+### 조회 - 뿌린 본인만 조회가 가능합니다
+GET http://localhost:5000/fling?token={{tokena}}
+Content-Type: application/json
+X-USER-ID: 21
+X-ROOM-ID: R00000000002
+
+> {%
+    client.test("조회 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
+
+### 조회 - 7일이 지난 뿌리기는 조회가 불가능합니다.
+### DB 강제 변경 후 테스트 필요
+GET http://localhost:5000/fling?token={{tokena}}
+Content-Type: application/json
+X-USER-ID: 20
+X-ROOM-ID: R00000000002
+
+> {%
+    client.test("조회 오류 응답", function() {
+        client.assert(response.status !== 200, response.status + " 정상응답발생")
+    })
+%}
